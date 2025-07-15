@@ -16,7 +16,7 @@ if machine_code not in requests.get(url).text.splitlines():
     print(f"{machine_code}")
     print("Kodni aktivlashtirish uchun @Enshteyn40 ga murojat qiling")
     sys.exit()
-print("✅ Kod aktiv. Oxirgi yangilanish: 13.07.2025")
+print("✅ Kod aktiv. Oxirgi yangilanish: 16.07.2025")
 
 phonecsv = "phone"
 with open(f'{phonecsv}.csv', 'r') as f:

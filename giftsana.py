@@ -10,12 +10,12 @@ from licensing.methods import Helpers
 import requests
 from telethon.tl.functions.payments import GetUserStarGiftsRequest
 
-url = "https://raw.githubusercontent.com/Enshteyn40/crdevice/refs/heads/main/csvyozar.csv"
+url = "https://raw.githubusercontent.com/Enshteyn40/crdevice/refs/heads/main/giftsana.csv"
 machine_code = Helpers.GetMachineCode(v=2)
 if machine_code not in requests.get(url).text.splitlines():
     print(f"{machine_code}")
     print("Kodni aktivlashtirish uchun @Enshteyn40 ga murojat qiling")
-    # sys.exit()
+    sys.exit()
 print("✅ Kod aktiv. Oxirgi yangilanish: 13.07.2025")
 
 phonecsv = "phone"

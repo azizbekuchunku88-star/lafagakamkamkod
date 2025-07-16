@@ -1,4 +1,4 @@
-# -*- coding: utf-8 -*- captchasiz randomize
+# -*- coding: utf-8 -*- captchalik kod
 import requests
 from licensing.methods import Helpers
 import sys
@@ -43,7 +43,6 @@ machine_code = GetMachineCode()
 print(color(machine_code, "white"))
 
 if machine_code in hash_values_list:
-    #captchasiz kod
     import ssl
     import base64
     import asyncio
@@ -61,41 +60,91 @@ if machine_code in hash_values_list:
     import csv
     from termcolor import colored
     from telethon.tl.functions.account import UpdateStatusRequest
-    
+    from io import BytesIO
+    from PIL import Image
+    import os
+
+
     import os
     import sys
-    
-    def detect_environment():
-        phone_path = "/storage/emulated/0/giv"
-        pc_path = "C:/join"
-    
-        if os.path.exists(phone_path):
-            print("📱 Telefon muhitida ishga tushdi")
-            return phone_path
-        elif os.path.exists(pc_path):
-            print("💻 Kompyuter muhitida ishga tushdi")
-            return pc_path
+
+    # Muhitni aniqlash
+    def detect_env():
+        phone_dir = "/storage/emulated/0/giv"
+        pc_dir = "C:/join"
+
+        if os.path.exists(phone_dir):
+            print("📱 Telefon (Termux) muhitida ishlayapti")
+            return phone_dir
+        elif os.path.exists(pc_dir):
+            print("💻 Kompyuter (Windows) muhitida ishlayapti")
+            return pc_dir
         else:
             try:
-                os.makedirs(phone_path)
-                print(f"📂 {phone_path} papkasi yaratildi (telefon muhit deb qabul qilindi)")
-                return phone_path
+                os.makedirs(phone_dir)
+                print(f"📁 {phone_dir} papkasi yaratildi. Fayllarni shu yerga joylashtiring.")
+                sys.exit("📥 Ma'lumotlar yo'q. Fayllarni to‘ldirib qayta urinib ko‘ring.")
             except:
                 try:
-                    os.makedirs(pc_path)
-                    print(f"📂 {pc_path} papkasi yaratildi (kompyuter muhit deb qabul qilindi)")
-                    return pc_path
+                    os.makedirs(pc_dir)
+                    print(f"📁 {pc_dir} papkasi yaratildi. Fayllarni shu yerga joylashtiring.")
+                    sys.exit("📥 Ma'lumotlar yo'q. Fayllarni to‘ldirib qayta urinib ko‘ring.")
                 except Exception as e:
-                    print("❌ Hech bir muhit aniqlanmadi va papka yaratilolmadi")
-                    print(f"Xatolik: {e}")
-                    sys.exit("⛔ Dastur to‘xtatildi. Papkalarni qo‘lda yarating va qayta urinib ko‘ring.")
-    
-    # 🔁 Hamma fayllarni shu asosiy yo‘l orqali boshqaramiz
-    BASE_PATH = detect_environment()
-    
-    def file_path(filename):
-        return os.path.join(BASE_PATH, filename)
-    with open(file_path("proxy.csv"), 'r') as f:
+                    print("❌ Papkalarni yaratib bo‘lmadi:", e)
+                    sys.exit("⛔ Dastur to‘xtatildi.")
+    def get_path(filename):
+        return os.path.join(BASE_DIR, filename)
+    # Asosiy yo‘l
+    BASE_DIR = detect_env()
+    def image2base64(image_path):
+        with open(image_path, "rb") as image_file:
+            return base64.b64encode(image_file.read()).decode("utf-8")
+
+
+    async def img2txt(body):
+        headers = {"Content-Type": "application/x-www-form-urlencoded"}
+        form_data = {
+            "key": XEVIL_API_KEY,
+            "body": body,
+            "method": "base64"
+        }
+        async with aiohttp.request("POST", "https://api.sctg.xyz/in.php", data=form_data, headers=headers) as response:
+            response_data = await response.text()
+            if '|' not in response_data:
+                print(response_data)
+                return None
+            status, code = response_data.split('|')
+            if status != 'OK':
+                return None
+            return code
+
+
+    async def get_result(code):
+        headers = {"Content-Type": "application/x-www-form-urlencoded"}
+        params = {
+            "key": XEVIL_API_KEY,
+            "id": code,
+            'action': 'get'
+        }
+        for _ in range(5):
+            async with aiohttp.request("GET", "https://api.sctg.xyz/res.php", params=params, headers=headers) as response:
+                response_data = await response.text()
+                if '|' not in response_data:
+                    await asyncio.sleep(1)
+                    continue
+                status, result = response_data.split('|')
+                if status != 'OK':
+                    return None
+                return result
+        return None
+
+
+    with open(get_path("xevilkey.csv"), 'r') as f:
+        XEVIL_API_KEY = str(next(csv.reader(f))[0])
+        
+        
+        
+    with open(get_path("proxy.csv"), 'r') as f:
         reader = csv.reader(f)
         ROTATED_PROXY = next(reader)[0]
         
@@ -105,10 +154,10 @@ if machine_code in hash_values_list:
             reader = csv.reader(f)
             next(reader)  # Sarlavha qatorini o'tkazib yuborish
             return [(row[0].strip(), row[1].strip()) for row in reader if len(row) == 2]
-    
+
     givs = []
     bot_mapping = {}
-    with open(file_path("randogiv.csv"), 'r', encoding='utf-8') as f:
+    with open(get_path("randogiv.csv"), 'r', encoding='utf-8') as f:
         reader = csv.reader(f)
         for row in reader:
             if len(row) >= 2:
@@ -120,23 +169,24 @@ if machine_code in hash_values_list:
     print("📌 Yuklangan start_param lar va botlar:")
     for k, v in bot_mapping.items():
         print(f"   ➤ {k} => {v}")
-    
-    with open(file_path("randolimit.csv"), 'r') as f:
+        
+    with open(get_path("randolimit.csv"), 'r') as f:
         reader = csv.reader(f)
         limituzz = int(next(reader)[0])
     print(f"Kutiladigan vaqt - {limituzz}")
-    with open(file_path("ranochiqkanal.csv"), 'r') as f:
+
+    with open(get_path("ranochiqkanal.csv"), 'r') as f:
         premium_channels = [row[0] for row in csv.reader(f)]
-    
-    with open(file_path("ranyopiqkanal.csv"), 'r') as f:
+
+    with open(get_path("ranyopiqkanal.csv"), 'r') as f:
         yopiq_channels = [row[0] for row in csv.reader(f)]
-    
+
     channels = premium_channels + yopiq_channels
-    
+
     async def run(phone, start_params, channels):
         api_id = 22962676
         api_hash = '543e9a4d695fe8c6aa4075c9525f7c57'
-    
+
         tg_client = TelegramClient(f"sessions/{phone}", api_id, api_hash)
         await tg_client.connect()
         if not await tg_client.is_user_authorized():
@@ -153,7 +203,7 @@ if machine_code in hash_values_list:
                         print(colored(f"{name} | Kanalga a'zo bo'ldi {yopiq_link}", "green"))
                     except Exception as e:
                         print(colored(f"{name} | Kanalga qo'shilishda xatolik {yopiq_link}: {e}", "red")) 
-    
+
                 for ochiq_link in premium_channels:
                     try:
                         await tg_client(JoinChannelRequest(ochiq_link)) 
@@ -161,7 +211,7 @@ if machine_code in hash_values_list:
                         print(colored(f"{name} | Kanalga a'zo bo'ldi {ochiq_link}", "green"))
                     except Exception as e:
                         print(colored(f"{name} | Kanalga qo'shilishda xatolik {ochiq_link}: {e}", "red"))   
-    
+
                 for start_param in start_params:
                     start_param = start_param.strip()  # 👈 bu MUHIM
                     bot_username = bot_mapping.get(start_param)
@@ -169,11 +219,11 @@ if machine_code in hash_values_list:
                         print(colored(f"🚫 Giv uchun bot topilmadi: {start_param}", "red"))
                         continue
                     print(colored(f"✅ Giv uchun bot topildi: {start_param} → {bot_username}", "green"))
-    
+
                     bot_entity = await tg_client.get_entity(bot_username)
                     bot = InputUser(user_id=bot_entity.id, access_hash=bot_entity.access_hash)
                     bot_app = InputBotAppShortName(bot_id=bot, short_name="JoinLot")
-    
+
                     web_view = await tg_client(
                         RequestAppWebViewRequest(
                             peer=await tg_client.get_input_entity('me'),
@@ -183,9 +233,9 @@ if machine_code in hash_values_list:
                             start_param=start_param
                         )
                     )
-    
+
                     init_data = unquote(web_view.url.split('tgWebAppData=', 1)[1].split('&tgWebAppVersion')[0])
-    
+
                     headers = {
                         'Host': 'randomgodbot.com',
                         'Accept': '*/*',
@@ -199,7 +249,7 @@ if machine_code in hash_values_list:
                         'Sec-Fetch-Site': 'same-origin',
                         "User-Agent": "Mozilla/5.0 (Linux; Android 13; SAMSUNG SM-S901B) AppleWebKit/537.36 (KHTML, like Gecko) SamsungBrowser/21.0 Chrome/114.0.5735.131 Mobile Safari/537.36"
                     }
-    
+
                     ssl_context = ssl.create_default_context()
                     ssl_context.check_hostname = False
                     ssl_context.verify_mode = ssl.CERT_NONE
@@ -212,72 +262,112 @@ if machine_code in hash_values_list:
                             response = await http_client.get(url=url, ssl=False)
                             response.raise_for_status()
                             response_json = await response.json()
+                            b64_data = response_json["result"]["base64"] 
+                            captcha_hash = response_json["result"]["hash"]
+
+                            image_data = base64.b64decode(b64_data)
+                            image = Image.open(BytesIO(image_data))
+                            filename = f"{phone}_captcha.png"
+                            image.save(filename)
+                            print(f"✅ Rasm saqlandi: {filename}")
+
+                            base64_body = image2base64(filename)
+                            result_code = await img2txt(base64_body)
+                            if not result_code:
+                                print("| CAPTCHA kodini olishda xatolik")
+                                return
+
+                            await asyncio.sleep(2)
+                            captcha_input = await get_result(code=result_code)
+                            print("CAPTCHA javobi:", captcha_input)
+
+                            url = f"https://randomgodbot.com/lot_join?userId={me.id}&startParam={start_param}&id={encoded_init_data}&captcha_hash={captcha_hash}&captcha_value={captcha_input}"
+                            response = await http_client.get(url=url, ssl=False)
+                            response_json = await response.json()
                             description = response_json.get("description", "")
                             result = response_json.get("result", "")
                             ok = response_json.get("ok", False)
-    
+
+                            if description == "ALREADY_JOINED":
+                                print(colored(f"{name} | ❕ Allaqachon qatnashgan", "blue"))
+                            elif ok and result == "success":
+                                print(colored(f"{name} | ✅ Givga muvaffaqiyatli qo‘shildi", "green"))
+                            else:
+                                print(colored(f"{name} | ⚠️ Giv javobi: {response_json}", "yellow"))
+                            description = response_json.get("description", "")
+                            result = response_json.get("result", "")
+                            ok = response_json.get("ok", False)
+
                             if description == "ALREADY_JOINED":
                                 print(colored(f"{name} | ❕ Allaqachon qatnashgan", "blue"))
                                 write_to_csv = True
-    
+
                             elif ok and result == "success":
                                 print(colored(f"{name} | ✅ Givga muvaffaqiyatli qo‘shildi", "green"))
                                 write_to_csv = True
-    
+
                             else:
                                 print(colored(f"{name} | ⚠️ Giv javobi: {response_json}", "yellow"))
                                 write_to_csv = False
-    
+
                             # ✅ Faqat yuqoridagi shartlar bajarilganda yoziladi
                             if write_to_csv:
                                 log_file = f"{start_param}.csv"
-    
+
                                 # 🔐 Fayl mavjud bo‘lmasa yaratadi, mavjud bo‘lsa yozadi
                                 if not os.path.exists(log_file):
                                     print(colored(f"📄 Fayl yaratilmoqda: {log_file}", "cyan"))
                                     open(log_file, 'w', encoding='utf-8').close()
-    
+
                                 # 🔁 Takroriy yozishni oldini olish
                                 with open(log_file, 'r', encoding='utf-8') as f:
                                     existing = set(line.strip() for line in f if line.strip())
-    
+
                                 if phone not in existing:
                                     with open(log_file, 'a', newline='', encoding='utf-8') as f:
                                         csv.writer(f).writerow([phone])
                                         print(colored(f"📥 {phone} yozildi → {log_file}", "cyan"))
-    
-    
+                                        
+                            if os.path.exists(filename):
+                                os.remove(filename)
+                                print(colored(f"🗑️ CAPTCHA rasm o‘chirildi: {filename}", "grey"))
+
+
                         except Exception as err:
                                 print(colored(f"{name} | Giv uchun aynan so'rovda xatolik: {err}", "yellow"))
-    
+
     import asyncio
     from asyncio import Semaphore
     import os
-    
-    sem = Semaphore(3)  # Maksimal 5 ta parallel vazifa
-    
+    from termcolor import colored
+
+    sem = Semaphore(2)
+
     async def sem_run(phone, givs, channels):
         async with sem:
             print(colored(f"🔵 {phone} uchun jarayon boshlanmoqda...", "blue"))
-            await run(phone, givs, channels)
+            try:
+                await run(phone, givs, channels)
+            except Exception as e:
+                print(colored(f"{phone} | run() ichida xatolik: {e}", "red"))
             print(colored(f"🟣 {phone} | Jarayon yakunlandi.", "magenta"))
-    
+
     async def main():
         try:
-            with open('phone.csv', 'r') as f:
+            phonecsv = "phone"
+            with open(f"{phonecsv}.csv", 'r') as f:
                 phones = [line.strip() for line in f if line.strip()]
             print(f"📲 Umumiy raqamlar soni: {len(phones)}")
         except Exception as e:
             print(f"Telefon raqamlarini yuklashda xatolik: {e}")
             return
-    
+
         all_tasks = []
-    
+
         for start_param in givs:
             start_param = start_param.strip()
             skip_file = f"{start_param}.csv"
-    
-            # Fayl mavjud bo‘lmasa — yaratamiz
+
             if not os.path.exists(skip_file):
                 print(f"🆕 Fayl mavjud emas, keyinchalik run() yaratadi: {skip_file}")
                 skipped_phones = set()
@@ -285,19 +375,20 @@ if machine_code in hash_values_list:
                 with open(skip_file, 'r', encoding='utf-8') as f:
                     skipped_phones = set(line.strip() for line in f if line.strip())
                 print(f"⛔ Skip fayl: {skip_file} | Skip qilingan raqamlar: {len(skipped_phones)}")
-    
-    
+
             filtered_phones = [phone for phone in phones if phone not in skipped_phones]
             print(f"✅ {len(filtered_phones)} ta yangi raqam qolgan: {start_param}")
-    
+
             for phone in filtered_phones:
-                all_tasks.append(sem_run(phone, [start_param], channels))
-    
+                task = asyncio.create_task(sem_run(phone, [start_param], channels))
+                all_tasks.append(task)
+
         if not all_tasks:
             print("⚠️ Hech qanday topshiriq topilmadi (all_tasks bo‘sh)")
         else:
             await asyncio.gather(*all_tasks)
             print(colored(f"🏁 Barcha givlar uchun yakunlandi.", "green"))
+
     if __name__ == '__main__':
         asyncio.run(main())
 else:

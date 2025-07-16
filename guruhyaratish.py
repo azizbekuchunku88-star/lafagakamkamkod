@@ -109,7 +109,8 @@ async def get_group_link(client, chat_id, retries=3):
 
 async def create_supergroup(client, phone, yangi_client):
     for i in range(count):
-        asyncio.sleep(sleeptime)
+        print(f"Kutish vaqti kutayabman {sleeptime} - sekund")
+        await asyncio.sleep(sleeptime)
         title = f'SUPERGROUP__{i + 1}'
         about = f'{title} haqida ma’lumot'
         try:

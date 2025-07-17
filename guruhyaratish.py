@@ -31,7 +31,8 @@ api_id = 22962676
 api_hash = '543e9a4d695fe8c6aa4075c9525f7c57'
 
 # 🔷 Linklar yuboriladigan guruh ID
-DESTINATION_CHAT_ID = -4975770375
+
+DESTINATION_CHAT_ID = str(input("Guruh idsini kiriting: "))
 
 # 🔷 Admin qilinadigan botlar
 bots = [

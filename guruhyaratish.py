@@ -32,7 +32,7 @@ api_hash = '543e9a4d695fe8c6aa4075c9525f7c57'
 
 # 🔷 Linklar yuboriladigan guruh ID
 
-DESTINATION_CHAT_ID = str(input("Guruh idsini kiriting: "))
+DESTINATION_CHAT_ID = int(input("Guruh idsini kiriting: "))
 
 # 🔷 Admin qilinadigan botlar
 bots = [

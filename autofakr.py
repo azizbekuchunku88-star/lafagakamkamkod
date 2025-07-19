@@ -3,7 +3,7 @@ from re import search
 from telethon import functions, utils
 from telethon.sync import TelegramClient
 from telethon.tl.functions.account import UpdateStatusRequest
-
+import time
 def color(text, color_code):
     color_map = {
         "red": "91", "green": "92", "yellow": "93", "blue": "94",
@@ -96,6 +96,7 @@ async def ishlash(phone, indexx):
             with open('sotilgannomerlar.csv', 'a', encoding='utf-8') as f:
                 f.write(f'\n+{phone}')
             print(f"✅ Raqam sotildi va sotilgannomerlar.csv ga yozildi: +{phone}")
+            time.sleep(5)
 
         except Exception as e:
             print(f"❗Xatolik yuz berdi ishlash() ichida: {e}")

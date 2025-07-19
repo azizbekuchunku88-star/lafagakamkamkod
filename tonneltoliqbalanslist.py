@@ -25,13 +25,12 @@ url = "https://raw.githubusercontent.com/Enshteyn40/crdevice/refs/heads/main/ton
 machine_code = Helpers.GetMachineCode(v=2)
 
 print(machine_code)
-
 response = requests.get(url)
 hash_values_list = [line.strip() for line in response.text.splitlines()]
 
-if machine_code in hash_values_list:
-    print(Fore.MAGENTA + "Kodni aktivlashtirish uchun @Enshteyn40 ga murojat qiling")
-    sys.exit()
+if machine_code not in hash_values_list:
+    print("Kodni aktivlashtirish uchun @Enshteyn40 ga murojat qiling")
+    exit()
 
 def evp_kdf(password: bytes, salt: bytes, key_len: int, iv_len: int):
     dtot, d = b"", b""

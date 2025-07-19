@@ -20,7 +20,7 @@ from licensing.methods import Helpers
 from colorama import Fore, init
 
 init(autoreset=True)
-
+print("Aktual codemi")
 url = "https://raw.githubusercontent.com/Enshteyn40/crdevice/refs/heads/main/tonnel_3.csv"
 machine_code = Helpers.GetMachineCode(v=2)
 

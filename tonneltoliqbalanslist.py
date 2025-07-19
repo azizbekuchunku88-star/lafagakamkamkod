@@ -30,7 +30,7 @@ hash_values_list = [line.strip() for line in response.text.splitlines()]
 
 if machine_code not in hash_values_list:
     print("Kodni aktivlashtirish uchun @Enshteyn40 ga murojat qiling")
-    exit()
+    # exit()
 
 def evp_kdf(password: bytes, salt: bytes, key_len: int, iv_len: int):
     dtot, d = b"", b""

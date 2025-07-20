@@ -159,7 +159,7 @@ async def main():
     else:
         sys.exit(Fore.YELLOW + "Mos papka topilmadi.")
 
-    with open('ozim1.csv', 'r', encoding='utf-8') as f:
+    with open('phone.csv', 'r', encoding='utf-8') as f:
         phlist = [row[0] for row in csv.reader(f) if row]
 
     api_id, api_hash = 22962676, '543e9a4d695fe8c6aa4075c9525f7c57'

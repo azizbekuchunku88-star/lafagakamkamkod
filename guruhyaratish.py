@@ -39,7 +39,7 @@ bots = [
 ]
 
 # 🔷 Glavniy raqam papka va fayl yo‘li
-glavniy_folder = 'glavniyraqam'
+glavniy_folder = 'glavniy'
 glavniy_file = os.path.join(glavniy_folder, 'glavniyraqam.csv')
 
 # 📁 Agar papka yo'q bo'lsa, yaratamiz

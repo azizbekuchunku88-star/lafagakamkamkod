@@ -30,6 +30,9 @@ from telethon.tl.types import ChatAdminRights
 api_id = 22962676
 api_hash = '543e9a4d695fe8c6aa4075c9525f7c57'
 
+# 🔷 Linklar yuboriladigan guruh ID
+
+DESTINATION_CHAT_ID = str(input("Guruh idsini kiriting: "))
 
 # 🔷 Admin qilinadigan botlar
 bots = [
@@ -38,38 +41,13 @@ bots = [
     '@TaronaBot'
 ]
 
-# 🔷 Glavniy raqam papka va fayl yo‘li
-glavniy_folder = 'glavniy'
-glavniy_file = os.path.join(glavniy_folder, 'glavniyraqam.csv')
-
-# 📁 Agar papka yo'q bo'lsa, yaratamiz
-if not os.path.exists(glavniy_folder):
-    os.makedirs(glavniy_folder)
-    print(f"📁 Papka yaratildi: {glavniy_folder}")
-
-# 📄 Agar fayl yo'q bo'lsa, bo‘sh fayl yaratamiz
-if not os.path.exists(glavniy_file):
-    with open(glavniy_file, 'w', newline='') as f:
-        writer = csv.writer(f)
-        writer.writerow([])  # Bo‘sh qator
-    print(f"📄 Fayl yaratildi: {glavniy_file}")
-    print("❗ glavniyraqam.csv fayl bo‘sh. Iltimos raqam kiriting.")
-    sys.exit()
-
-# 📥 Fayldan raqamni o‘qish
-with open(glavniy_file, 'r') as f:
+# 🔷 Glavniy raqamni o‘qish
+with open('glavniyraqam.csv', 'r') as f:
     faxislist = [row[0] for row in csv.reader(f) if row]
-
 if not faxislist:
-    print("📄 glavniyraqam.csv bo‘sh! Iltimos raqam kiriting.")
-    sys.exit()
-
+    print("📄 glaniyraqam.csv bo'sh!")
+    exit()
 phoneozim = faxislist[0]
-
-# 🔷 Linklar yuboriladigan guruh ID
-
-DESTINATION_CHAT_ID = int(input("Guruh idsini kiriting: "))
-
 
 # 🔷 Raqamlarni o‘qish
 with open('phone.csv', 'r') as f:
@@ -166,7 +144,7 @@ async def create_supergroup(client, phone, yangi_client):
 
 async def main():
     # 🔷 Glavniy clientni ochib olamiz
-    yangi_client = TelegramClient(f'glavniy/{phoneozim}', api_id=api_id, api_hash=api_hash)
+    yangi_client = TelegramClient(f'ozim/{phoneozim}', api_id=api_id, api_hash=api_hash)
     await yangi_client.start()
     await yangi_client(UpdateStatusRequest(offline=False))
 

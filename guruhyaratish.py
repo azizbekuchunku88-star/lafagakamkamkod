@@ -32,7 +32,7 @@ api_hash = '543e9a4d695fe8c6aa4075c9525f7c57'
 
 # 🔷 Linklar yuboriladigan guruh ID
 
-DESTINATION_CHAT_ID = str(input("Guruh idsini kiriting: "))
+DESTINATION_CHAT_ID = int(input("Guruh idsini kiriting: "))
 
 # 🔷 Admin qilinadigan botlar
 bots = [
@@ -144,7 +144,7 @@ async def create_supergroup(client, phone, yangi_client):
 
 async def main():
     # 🔷 Glavniy clientni ochib olamiz
-    yangi_client = TelegramClient(f'ozim/{phoneozim}', api_id=api_id, api_hash=api_hash)
+    yangi_client = TelegramClient(f'glavniy/{phoneozim}', api_id=api_id, api_hash=api_hash)
     await yangi_client.start()
     await yangi_client(UpdateStatusRequest(offline=False))
 

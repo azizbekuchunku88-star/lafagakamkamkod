@@ -49,9 +49,25 @@ if not faxislist:
     exit()
 phoneozim = faxislist[0]
 
-# 🔷 Raqamlarni o‘qish
 with open('phone.csv', 'r') as f:
-    phlist = [row[0] for row in csv.reader(f) if row]
+    all_numbers = [row[0] for row in csv.reader(f) if row]
+
+print(f"📱 Umumiy raqamlar soni: {len(all_numbers)}")
+
+# 🔷 Boshlanish va tugash indekslarini olish
+while True:
+    try:
+        start_index = int(input("📍 Qaysi raqamdan boshlaymiz? (1 dan boshlab): "))
+        end_index = int(input("📍 Qaysi raqamgacha? (shu raqam ham kiradi): "))
+        if start_index < 1 or end_index > len(all_numbers) or start_index > end_index:
+            raise ValueError
+        break
+    except ValueError:
+        print("🚫 Noto'g'ri indekslar! 1 dan boshlanadigan to'g'ri oraliq kiriting.")
+
+# 🔷 Faqat kerakli oraliqni olish
+phlist = all_numbers[start_index - 1:end_index]
+print(f"✅ {start_index}-dan {end_index}-gacha bo‘lgan {len(phlist)} ta raqam tanlandi.")
 
 # 🔷 Guruh sonini bir marta so‘raymiz
 while True:

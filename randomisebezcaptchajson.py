@@ -112,16 +112,36 @@ if machine_code in hash_values_list:
     channels = premium_channels + yopiq_channels
 
     # ===== accounts.json dan o‘qish =====
+    # ↓ ESKI load_accounts() O'RNIGA SHUNI QO'YING
     def load_accounts():
-        acc_path = file_path("accounts.json")
-        if not os.path.exists(acc_path):
-            print(colored(f"accounts.json topilmadi: {acc_path}", "red"))
+        # 1) Joriy ishchi papka (CWD)  2) Skript papkasi  3) BASE_PATH (zaxira)
+        candidates = [
+            os.path.join(os.getcwd(), "accounts.json"),
+            os.path.join(os.path.dirname(os.path.abspath(__file__)), "accounts.json"),
+            file_path("accounts.json"),
+        ]
+
+        acc_path = None
+        for p in candidates:
+            if os.path.exists(p):
+                acc_path = p
+                break
+
+        if not acc_path:
+            print(colored(
+                "accounts.json topilmadi. Qidirilgan joylar:\n" + "\n".join(candidates),
+                "red"
+            ))
             sys.exit(1)
+
+        print(colored(f"accounts.json yuklandi: {acc_path}", "cyan"))
+
         try:
             with open(acc_path, 'r', encoding='utf-8') as f:
                 data = json.load(f)
+
             if isinstance(data, dict):
-                pairs = [(p.strip(), s.strip()) for p, s in data.items() if p and s]
+                pairs = [(str(p).strip(), str(s).strip()) for p, s in data.items() if p and s]
             elif isinstance(data, list):
                 pairs = []
                 for item in data:
@@ -130,10 +150,13 @@ if machine_code in hash_values_list:
                     if p and s:
                         pairs.append((p, s))
             else:
-                raise ValueError("accounts.json noto‘g‘ri formatda")
+                raise ValueError("accounts.json noto‘g‘ri formatda (dict yoki list bo‘lishi kerak).")
+
             if not pairs:
-                raise ValueError("accounts.json bo‘sh yoki noto‘g‘ri")
+                raise ValueError("accounts.json bo‘sh yoki noto‘g‘ri to‘ldirilgan.")
+
             return pairs
+
         except Exception as e:
             print(colored(f"accounts.json o‘qishda xatolik: {e}", "red"))
             sys.exit(1)

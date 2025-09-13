@@ -163,19 +163,34 @@ if machine_code in hash_values_list:
     channels = premium_channels + yopiq_channels
 
     # ===== Asosiy ish: endi accounts.json dan o‘qiymiz =====
+    # ↓ ESKI load_accounts() O'RNIGA SHUNI QO'YING
     def load_accounts():
-        acc_path = get_path("accounts.json")
-        if not os.path.exists(acc_path):
-            print(colored(f"accounts.json topilmadi: {acc_path}", "red"))
+        # Qidiriladigan joylar: 1) CWD  2) skript papkasi  3) BASE_DIR (get_path)
+        candidates = [
+            os.path.join(os.getcwd(), "accounts.json"),
+            os.path.join(os.path.dirname(os.path.abspath(__file__)), "accounts.json"),
+            get_path("accounts.json"),
+        ]
+
+        acc_path = next((p for p in candidates if os.path.exists(p)), None)
+        if not acc_path:
+            print(colored(
+                "accounts.json topilmadi. Qidirilgan joylar:\n" + "\n".join(candidates),
+                "red"
+            ))
             sys.exit(1)
+
+        print(colored(f"accounts.json yuklandi: {acc_path}", "cyan"))
+
         try:
             with open(acc_path, 'r', encoding='utf-8') as f:
                 data = json.load(f)
+
             if isinstance(data, dict):
-                # {"phone": "StringSession", ...}
-                pairs = [(p.strip(), s.strip()) for p, s in data.items() if p and s]
+                # {"99890...": "STRING_SESSION", ...}
+                pairs = [(str(p).strip(), str(s).strip()) for p, s in data.items() if p and s]
             elif isinstance(data, list):
-                # [{"phone":"...","session":"..."}] bo‘lishi mumkin bo‘lsa
+                # [{"phone":"...", "session":"..."} , ...]
                 pairs = []
                 for item in data:
                     p = str(item.get("phone", "")).strip()
@@ -183,13 +198,17 @@ if machine_code in hash_values_list:
                     if p and s:
                         pairs.append((p, s))
             else:
-                raise ValueError("accounts.json noto‘g‘ri formatda")
+                raise ValueError("accounts.json noto‘g‘ri formatda (dict yoki list bo‘lishi kerak).")
+
             if not pairs:
-                raise ValueError("accounts.json bo‘sh yoki noto‘g‘ri")
+                raise ValueError("accounts.json bo‘sh yoki noto‘g‘ri to‘ldirilgan.")
+
             return pairs
+
         except Exception as e:
             print(colored(f"accounts.json o‘qishda xatolik: {e}", "red"))
             sys.exit(1)
+
 
     # ===== Telegram ish funksiyasi (StringSession bilan) =====
     async def run(phone: str, session_str: str, start_params, channels):

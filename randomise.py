@@ -131,14 +131,15 @@ async def get_result(code):
     return None
 
 
-# =============== Konfiguratsiya fayllari ===============
-# XEvil API key
-with open(r"C:\\join\\xevilkey.csv", 'r', encoding="utf-8") as f:
-    XEVIL_API_KEY = str(next(csv.reader(f))[0]).strip()
+# =============== Foydali yordamchilar: CSV o‘qish ===============
+import csv, os
+from termcolor import colored
 
-
-# Proxy: ko‘p-yo‘lli qidirish (S:\join, Android, C:\join, ./)
 def _read_first_cell_csv(path: str) -> str:
+    """
+    CSV faylning birinchi to‘lmagan katagini o‘qiydi.
+    Topilmasa yoki bo‘sh bo‘lsa, "" qaytaradi.
+    """
     try:
         if not os.path.exists(path):
             return ""
@@ -154,37 +155,48 @@ def _read_first_cell_csv(path: str) -> str:
     except Exception:
         return ""
 
-PROXY_CANDIDATES = [
-    r"S:\join\proxy.csv",                    # 1) S disk
-    "/storage/emulated/0/giv/proxy.csv",     # 2) Android (Termux)
-    r"C:\join\proxy.csv",                    # 3) Windows C
-    "./proxy.csv",                           # 4) joriy papka
-]
+def _first_non_empty_from_candidates(candidates):
+    """
+    Berilgan yo‘llar ro‘yxatidan birinchi to‘lmagan qiymatni qaytaradi.
+    """
+    for p in candidates:
+        val = _read_first_cell_csv(p)
+        if val:
+            print(colored(f"✅ Topildi: {p}", "cyan"))
+            return val, p
+    return "", ""
 
-ROTATED_PROXY = ""
-for _p in PROXY_CANDIDATES:
-    ROTATED_PROXY = _read_first_cell_csv(_p)
-    if ROTATED_PROXY:
-        print(colored(f"🔌 Proxy topildi: {_p}", "cyan"))
-        break
-if not ROTATED_PROXY:
+# =============== XEvil API KEY (xevilkey.csv) ===============
+XEVIL_API_KEY, XEVIL_SRC = _first_non_empty_from_candidates([
+    "/storage/emulated/0/giv/xevilkey.csv",   # Android (Termux)
+    r"C:\join\xevilkey.csv",                  # Windows
+])
+if not XEVIL_API_KEY:
+    print(colored("⚠️ xevilkey.csv topilmadi yoki bo‘sh — CAPTCHA servisi ishlamasligi mumkin.", "yellow"))
+else:
+    print(colored(f"🔑 XEvil API key: {XEVIL_SRC} dan olindi", "cyan"))
+
+# =============== Proxy (proxy.csv) ===============
+ROTATED_PROXY, PROXY_SRC = _first_non_empty_from_candidates([
+    "/storage/emulated/0/giv/proxy.csv",      # Android (Termux)
+    r"C:\join\proxy.csv",                     # Windows
+])
+if ROTATED_PROXY:
+    print(colored(f"🔌 Proxy topildi: {PROXY_SRC}", "cyan"))
+else:
     print(colored("ℹ️ proxy.csv topilmadi yoki bo‘sh. Proxysiz ishlaymiz.", "yellow"))
 
-
-# Turnstile server API KEY (enshteyn40.com) — ko‘p-yo‘lli qidirish
-captchapai = ""
-for candidate in (r"C:\join\captcha2ensh.csv", r".\captcha2ensh.csv"):
-    if os.path.exists(candidate):
-        try:
-            with open(candidate, 'r', encoding='utf-8') as f:
-                captchapai = (next(csv.reader(f))[0] or "").strip()
-                if captchapai:
-                    print(colored(f"🔑 Turnstile API key: {candidate} dan olindi", "cyan"))
-                    break
-        except Exception:
-            pass
-if not captchapai:
+# =============== Turnstile server API KEY (captcha2ensh.csv) ===============
+captchapai, CAPTCHA_SRC = _first_non_empty_from_candidates([
+    "/storage/emulated/0/giv/captcha2ensh.csv",  # Android (Termux)
+    r"C:\join\captcha2ensh.csv",                 # Windows
+    r".\captcha2ensh.csv",                       # Joriy papka (fallback)
+])
+if captchapai:
+    print(colored(f"🔑 Turnstile API key: {CAPTCHA_SRC} dan olindi", "cyan"))
+else:
     print(colored("⚠️ captcha2ensh.csv topilmadi yoki bo‘sh. Turnstile token olinmasligi mumkin.", "yellow"))
+
 
 
 def add_to_bans(phone):

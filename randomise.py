@@ -412,7 +412,7 @@ async def run(phone, start_params, channels):
                     encoded_init_data = base64.b64encode(init_data.encode()).decode()
 
                     # 1-bosqich: captcha rasmini olish (IP orqali)
-                    url = f"https://185.203.72.14/lot_join?userId={me.id}&startParam={start_param}&id={encoded_init_data}&token=-"
+                    url = f"https://randomgodbot.com/lot_join?userId={me.id}&startParam={start_param}&id={encoded_init_data}&token=-"
                     response = await http_client.get(url=url, ssl=False)
                     response.raise_for_status()
                     response_json = await response.json()

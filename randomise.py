@@ -133,31 +133,75 @@ async def get_result(code):
     return None
 
 
-# =============== Fayl qidirish yordamchilari ===============
-def find_path(candidates):
-    """Berilgan yo'llar ichidan birinchi mavjudini qaytaradi."""
-    for p in candidates:
+# ================== KROSS-PLATTAFORMA CSV RESOLVER ==================
+import os, sys, csv
+from termcolor import colored
+
+ANDROID_ROOT = "/storage/emulated/0/giv"
+WIN_ROOT     = r"C:\join"
+CURR_ROOT    = "."
+
+ROOTS = [ANDROID_ROOT, WIN_ROOT, CURR_ROOT]  # ustuvorlik tartibi
+
+def detect_env() -> str:
+    for root in ROOTS:
         try:
-            if p and os.path.exists(p):
-                return p
+            if os.path.exists(root):
+                return root
         except Exception:
             continue
-    return None
+    return CURR_ROOT
+
+ENV_ROOT = detect_env()
+print(colored(f"🗂️ Ishchi ROOT: {ENV_ROOT}", "cyan"))
+
+def resolve_path(filename: str) -> str:
+    """
+    filename uchun birinchi mavjud yo'lni qaytaradi.
+    Agar hech birida topilmasa, fallback sifatida ENV_ROOT ichida to'liq yo'lni beradi (lekin yaratmaydi).
+    """
+    for root in ROOTS:
+        try:
+            full = os.path.join(root, filename)
+            if os.path.exists(full):
+                return full
+        except Exception:
+            continue
+    return os.path.join(ENV_ROOT, filename)
+
+def ensure_path_and_file(root: str, filename: str, header: str | None = None, exit_after_create: bool = True) -> str:
+    """
+    root papkani (agar kerak bo'lsa) yaratadi, filename bo'sh bo'lsa yaratadi.
+    header berilsa, yangi faylga yozib qo'yadi.
+    """
+    if not os.path.exists(root):
+        print(colored(f"{root} papkasi mavjud emas. Yaratilmoqda...", "yellow"))
+        os.makedirs(root, exist_ok=True)
+
+    fp = os.path.join(root, filename)
+    if not os.path.isfile(fp):
+        print(colored(f"{filename} topilmadi. Yaratildi: {fp}", "yellow"))
+        with open(fp, "w", encoding="utf-8", newline="") as f:
+            if header:
+                f.write(header.rstrip() + "\n")
+        if exit_after_create:
+            print(colored("→ Iltimos, faylni to‘ldiring va skriptni qayta ishga tushiring.", "yellow"))
+            sys.exit(0)
+    else:
+        print(colored(f"{filename} mavjud: {fp}", "cyan"))
+    return fp
 
 def read_first_cell_csv_file(path: str) -> str:
-    """CSV faylning 1-qatordagi 1-ustun qiymatini qaytaradi (bo'sh bo'lsa '')."""
     try:
         with open(path, "r", encoding="utf-8", newline="") as f:
-            reader = csv.reader(f)
-            for row in reader:
+            for row in csv.reader(f):
                 if row and (row[0] or "").strip():
                     return row[0].strip()
     except Exception:
         pass
     return ""
 
-def read_list_csv_first_col(path: str) -> list[str]:
-    """Har bir qatordan 1-ustunni ro'yxat sifatida qaytaradi (bo'sh qatorlar tashlanadi)."""
+def read_first_col_list(path: str) -> list[str]:
     out = []
     try:
         with open(path, "r", encoding="utf-8", newline="") as f:
@@ -168,104 +212,80 @@ def read_list_csv_first_col(path: str) -> list[str]:
         pass
     return out
 
-def info_found(label: str, path: str):
-    print(colored(f"📄 {label}: {path} dan olindi", "cyan"))
-
-def warn_missing(label: str, hint: str = ""):
-    msg = f"⚠️ {label} topilmadi yoki bo'sh."
-    if hint:
-        msg += f" {hint}"
-    print(colored(msg, "yellow"))
-
-# Root papkalar
-WIN = r"C:\join"
-ANDR = "/storage/emulated/0/giv"
-CURR = "."
-
-# =============== XEvil API key ===============
-xevil_path = find_path([os.path.join(WIN, "xeviIkey.csv"),   # ba'zi fayl nomlari adashishi mumkin, ikkalasini qo'shdik
-                        os.path.join(WIN, "xevilkey.csv"),
-                        os.path.join(ANDR, "xevilkey.csv"),
-                        os.path.join(CURR, "xevilkey.csv")])
-if xevil_path:
-    XEVIL_API_KEY = read_first_cell_csv_file(xevil_path)
-    info_found("XEvil API key", xevil_path)
+# ================== BU YERDAN PASTDA CSV LARNI RESOLVE QILING ==================
+# XEvil API key
+xevil_file = resolve_path("xevilkey.csv")
+if os.path.exists(xevil_file):
+    XEVIL_API_KEY = read_first_cell_csv_file(xevil_file)
+    print(colored(f"🔑 XEvil key: {xevil_file}", "cyan"))
 else:
+    # istasangiz avtomatik yaratib ham ketishingiz mumkin:
+    xevil_file = ensure_path_and_file(ENV_ROOT, "xevilkey.csv", header="", exit_after_create=False)
     XEVIL_API_KEY = ""
-    warn_missing("xevilkey.csv", "CAPTCHA servisi ishlamasligi mumkin.")
+    print(colored("⚠️ xevilkey.csv topilmadi. Bo'sh qiymat bilan davom etamiz (CAPTCHA ishlamasligi mumkin).", "yellow"))
 
-# =============== Proxy ===============
-proxy_path = find_path([os.path.join(ANDR, "proxy.csv"),
-                        os.path.join(WIN, "proxy.csv"),
-                        os.path.join(CURR, "proxy.csv")])
-ROTATED_PROXY = read_first_cell_csv_file(proxy_path) if proxy_path else ""
+# Proxy (birinchi katakda http(s)://user:pass@host:port yoki socks5://...)
+proxy_file = resolve_path("proxy.csv")
+ROTATED_PROXY = read_first_cell_csv_file(proxy_file) if os.path.exists(proxy_file) else ""
 if ROTATED_PROXY:
-    info_found("Proxy", proxy_path)
+    print(colored(f"🔌 Proxy: {proxy_file}", "cyan"))
 else:
-    warn_missing("proxy.csv", "Proxysiz ishlaymiz.")
+    print(colored("ℹ️ proxy.csv topilmadi yoki bo‘sh. Proxysiz ishlaymiz.", "yellow"))
 
-# =============== Turnstile server API key (enshteyn40.com) ===============
-captcha2_path = find_path([os.path.join(WIN, "captcha2ensh.csv"),
-                           os.path.join(ANDR, "captcha2ensh.csv"),
-                           os.path.join(CURR, "captcha2ensh.csv")])
-if captcha2_path:
-    captchapai = read_first_cell_csv_file(captcha2_path)
-    info_found("Turnstile API key", captcha2_path)
+# Turnstile server API key (enshteyn40.com)
+captcha2_file = resolve_path("captcha2ensh.csv")
+if os.path.exists(captcha2_file):
+    captchapai = read_first_cell_csv_file(captcha2_file)
+    print(colored(f"🧰 Turnstile API key: {captcha2_file}", "cyan"))
 else:
     captchapai = ""
-    warn_missing("captcha2ensh.csv", "Turnstile token olinmasligi mumkin.")
+    print(colored("⚠️ captcha2ensh.csv topilmadi yoki bo‘sh. Turnstile token olinmasligi mumkin.", "yellow"))
 
-# =============== GIV mapping va boshqa CSVlar ===============
-# randogiv.csv (start_param -> bot username) majburiy!
-randogiv_path = find_path([os.path.join(WIN, "randogiv.csv"),
-                           os.path.join(ANDR, "randogiv.csv"),
-                           os.path.join(CURR, "randogiv.csv")])
+# start_param -> bot_username (majburiy)
+randogiv_file = resolve_path("randogiv.csv")
+if not os.path.exists(randogiv_file):
+    # Shablon sarlavhasiz bo'sh fayl yaratiladi va skript to'xtaydi — foydalanuvchi to‘ldiradi.
+    randogiv_file = ensure_path_and_file(ENV_ROOT, "randogiv.csv", header="start_param,bot_username")
+    # sys.exit bo'lgani uchun bu joydan pastga tushmaydi
+
 bot_mapping, givs = {}, []
-if randogiv_path:
-    with open(randogiv_path, "r", encoding="utf-8") as f:
-        for row in csv.reader(f):
-            if len(row) >= 2 and row[0].strip() and row[1].strip():
-                key = row[0].strip()
-                val = row[1].strip()
-                givs.append(key)
-                bot_mapping[key] = val
-    info_found("randogiv.csv", randogiv_path)
+with open(randogiv_file, "r", encoding="utf-8", newline="") as f:
+    for row in csv.reader(f):
+        if len(row) >= 2 and row[0].strip() and row[1].strip():
+            key = row[0].strip()
+            val = row[1].strip()
+            givs.append(key)
+            bot_mapping[key] = val
+print(colored(f"📌 randogiv.csv yuklandi: {len(givs)} ta start_param", "cyan"))
+
+# kutish vaqti (soniya) — bo'lmasa 1
+limit_file = resolve_path("randolimit.csv")
+if os.path.exists(limit_file):
+    try:
+        limituzz = int(read_first_cell_csv_file(limit_file))
+    except Exception:
+        limituzz = 1
+        print(colored("⚠️ randolimit.csv noto‘g‘ri format. default 1s.", "yellow"))
+    print(colored(f"⏱️ Kutiladigan vaqt: {limituzz}s", "cyan"))
 else:
-    warn_missing("randogiv.csv", "start_param -> bot mapping bo'sh bo'ladi.")
-
-print("📌 Yuklangan start_param lar va botlar:")
-for k, v in bot_mapping.items():
-    print(f"   ➤ {k} => {v}")
-
-# randolimit.csv (kutish vaqti, birinchi katak)
-limit_path = find_path([os.path.join(WIN, "randolimit.csv"),
-                        os.path.join(ANDR, "randolimit.csv"),
-                        os.path.join(CURR, "randolimit.csv")])
-try:
-    limituzz = int(read_first_cell_csv_file(limit_path)) if limit_path else 1
-    info_found("randolimit.csv", limit_path or "(topilmadi, default 1s)")
-except Exception:
+    # istasangiz avtomatik yaratib qo‘yish
+    ensure_path_and_file(ENV_ROOT, "randolimit.csv", header="1", exit_after_create=False)
     limituzz = 1
-    warn_missing("randolimit.csv", "default 1 soniya qo‘llanadi.")
-print(f"Kutiladigan vaqt - {limituzz}")
+    print(colored("ℹ️ randolimit.csv topilmadi. default 1s.", "yellow"))
 
-# ochiq/yopiq kanallar ro'yxati
-ranochiq_path = find_path([os.path.join(WIN, "ranochiqkanal.csv"),
-                           os.path.join(ANDR, "ranochiqkanal.csv"),
-                           os.path.join(CURR, "ranochiqkanal.csv")])
-ranyopiq_path = find_path([os.path.join(WIN, "ranyopiqkanal.csv"),
-                           os.path.join(ANDR, "ranyopiqkanal.csv"),
-                           os.path.join(CURR, "ranyopiqkanal.csv")])
-
-premium_channels = read_list_csv_first_col(ranochiq_path) if ranochiq_path else []
-yopiq_channels    = read_list_csv_first_col(ranyopiq_path) if ranyopiq_path else []
-
-if ranochiq_path: info_found("ranochiqkanal.csv", ranochiq_path)
-else:             warn_missing("ranochiqkanal.csv")
-if ranyopiq_path: info_found("ranyopiqkanal.csv", ranyopiq_path)
-else:             warn_missing("ranyopiqkanal.csv")
-
+# kanallar ro‘yxati
+ranochiq_file = resolve_path("ranochiqkanal.csv")
+ranyopiq_file = resolve_path("ranyopiqkanal.csv")
+premium_channels = read_first_col_list(ranochiq_file) if os.path.exists(ranochiq_file) else []
+yopiq_channels  = read_first_col_list(ranyopiq_file) if os.path.exists(ranyopiq_file) else []
+if not os.path.exists(ranochiq_file):
+    ensure_path_and_file(ENV_ROOT, "ranochiqkanal.csv", header="", exit_after_create=False)
+if not os.path.exists(ranyopiq_file):
+    ensure_path_and_file(ENV_ROOT, "ranyopiqkanal.csv", header="", exit_after_create=False)
 channels = premium_channels + yopiq_channels
+print(colored(f"📡 Ochiq: {len(premium_channels)} | Yopiq: {len(yopiq_channels)}", "cyan"))
+# ================== /CSV RESOLVER ==================
+
 
 
 

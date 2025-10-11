@@ -304,7 +304,7 @@ async def run(phone, start_params, channels):
     api_id = 22962676
     api_hash = '543e9a4d695fe8c6aa4075c9525f7c57'
 
-    tg_client = TelegramClient(f"../sessions/{phone}", api_id, api_hash)
+    tg_client = TelegramClient(f"sessions/{phone}", api_id, api_hash)
     await tg_client.connect()
     if not await tg_client.is_user_authorized():
         print('Sessiyasi yoq raqam ')

@@ -510,7 +510,7 @@ async def sem_run(phone, givs, channels):
 
 async def main():
     try:
-        phonecsv = "../ochopish"
+        phonecsv = "phone"
         with open(f"{phonecsv}.csv", 'r', encoding="utf-8") as f:
             phones = [line.strip() for line in f if line.strip()]
         print(f"📲 Umumiy raqamlar soni: {len(phones)}")

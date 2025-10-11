@@ -131,71 +131,140 @@ async def get_result(code):
     return None
 
 
-# =============== Foydali yordamchilar: CSV o‘qish ===============
-import csv, os
-from termcolor import colored
+# =============== Fayl qidirish yordamchilari ===============
+def find_path(candidates):
+    """Berilgan yo'llar ichidan birinchi mavjudini qaytaradi."""
+    for p in candidates:
+        try:
+            if p and os.path.exists(p):
+                return p
+        except Exception:
+            continue
+    return None
 
-def _read_first_cell_csv(path: str) -> str:
-    """
-    CSV faylning birinchi to‘lmagan katagini o‘qiydi.
-    Topilmasa yoki bo‘sh bo‘lsa, "" qaytaradi.
-    """
+def read_first_cell_csv_file(path: str) -> str:
+    """CSV faylning 1-qatordagi 1-ustun qiymatini qaytaradi (bo'sh bo'lsa '')."""
     try:
-        if not os.path.exists(path):
-            return ""
         with open(path, "r", encoding="utf-8", newline="") as f:
             reader = csv.reader(f)
             for row in reader:
-                if not row:
-                    continue
-                val = (row[0] or "").strip()
-                if val:
-                    return val
-        return ""
+                if row and (row[0] or "").strip():
+                    return row[0].strip()
     except Exception:
-        return ""
+        pass
+    return ""
 
-def _first_non_empty_from_candidates(candidates):
-    """
-    Berilgan yo‘llar ro‘yxatidan birinchi to‘lmagan qiymatni qaytaradi.
-    """
-    for p in candidates:
-        val = _read_first_cell_csv(p)
-        if val:
-            print(colored(f"✅ Topildi: {p}", "cyan"))
-            return val, p
-    return "", ""
+def read_list_csv_first_col(path: str) -> list[str]:
+    """Har bir qatordan 1-ustunni ro'yxat sifatida qaytaradi (bo'sh qatorlar tashlanadi)."""
+    out = []
+    try:
+        with open(path, "r", encoding="utf-8", newline="") as f:
+            for row in csv.reader(f):
+                if row and (row[0] or "").strip():
+                    out.append(row[0].strip())
+    except Exception:
+        pass
+    return out
 
-# =============== XEvil API KEY (xevilkey.csv) ===============
-XEVIL_API_KEY, XEVIL_SRC = _first_non_empty_from_candidates([
-    "/storage/emulated/0/giv/xevilkey.csv",   # Android (Termux)
-    r"C:\join\xevilkey.csv",                  # Windows
-])
-if not XEVIL_API_KEY:
-    print(colored("⚠️ xevilkey.csv topilmadi yoki bo‘sh — CAPTCHA servisi ishlamasligi mumkin.", "yellow"))
+def info_found(label: str, path: str):
+    print(colored(f"📄 {label}: {path} dan olindi", "cyan"))
+
+def warn_missing(label: str, hint: str = ""):
+    msg = f"⚠️ {label} topilmadi yoki bo'sh."
+    if hint:
+        msg += f" {hint}"
+    print(colored(msg, "yellow"))
+
+# Root papkalar
+WIN = r"C:\join"
+ANDR = "/storage/emulated/0/giv"
+CURR = "."
+
+# =============== XEvil API key ===============
+xevil_path = find_path([os.path.join(WIN, "xeviIkey.csv"),   # ba'zi fayl nomlari adashishi mumkin, ikkalasini qo'shdik
+                        os.path.join(WIN, "xevilkey.csv"),
+                        os.path.join(ANDR, "xevilkey.csv"),
+                        os.path.join(CURR, "xevilkey.csv")])
+if xevil_path:
+    XEVIL_API_KEY = read_first_cell_csv_file(xevil_path)
+    info_found("XEvil API key", xevil_path)
 else:
-    print(colored(f"🔑 XEvil API key: {XEVIL_SRC} dan olindi", "cyan"))
+    XEVIL_API_KEY = ""
+    warn_missing("xevilkey.csv", "CAPTCHA servisi ishlamasligi mumkin.")
 
-# =============== Proxy (proxy.csv) ===============
-ROTATED_PROXY, PROXY_SRC = _first_non_empty_from_candidates([
-    "/storage/emulated/0/giv/proxy.csv",      # Android (Termux)
-    r"C:\join\proxy.csv",                     # Windows
-])
+# =============== Proxy ===============
+proxy_path = find_path([os.path.join(ANDR, "proxy.csv"),
+                        os.path.join(WIN, "proxy.csv"),
+                        os.path.join(CURR, "proxy.csv")])
+ROTATED_PROXY = read_first_cell_csv_file(proxy_path) if proxy_path else ""
 if ROTATED_PROXY:
-    print(colored(f"🔌 Proxy topildi: {PROXY_SRC}", "cyan"))
+    info_found("Proxy", proxy_path)
 else:
-    print(colored("ℹ️ proxy.csv topilmadi yoki bo‘sh. Proxysiz ishlaymiz.", "yellow"))
+    warn_missing("proxy.csv", "Proxysiz ishlaymiz.")
 
-# =============== Turnstile server API KEY (captcha2ensh.csv) ===============
-captchapai, CAPTCHA_SRC = _first_non_empty_from_candidates([
-    "/storage/emulated/0/giv/captcha2ensh.csv",  # Android (Termux)
-    r"C:\join\captcha2ensh.csv",                 # Windows
-    r".\captcha2ensh.csv",                       # Joriy papka (fallback)
-])
-if captchapai:
-    print(colored(f"🔑 Turnstile API key: {CAPTCHA_SRC} dan olindi", "cyan"))
+# =============== Turnstile server API key (enshteyn40.com) ===============
+captcha2_path = find_path([os.path.join(WIN, "captcha2ensh.csv"),
+                           os.path.join(ANDR, "captcha2ensh.csv"),
+                           os.path.join(CURR, "captcha2ensh.csv")])
+if captcha2_path:
+    captchapai = read_first_cell_csv_file(captcha2_path)
+    info_found("Turnstile API key", captcha2_path)
 else:
-    print(colored("⚠️ captcha2ensh.csv topilmadi yoki bo‘sh. Turnstile token olinmasligi mumkin.", "yellow"))
+    captchapai = ""
+    warn_missing("captcha2ensh.csv", "Turnstile token olinmasligi mumkin.")
+
+# =============== GIV mapping va boshqa CSVlar ===============
+# randogiv.csv (start_param -> bot username) majburiy!
+randogiv_path = find_path([os.path.join(WIN, "randogiv.csv"),
+                           os.path.join(ANDR, "randogiv.csv"),
+                           os.path.join(CURR, "randogiv.csv")])
+bot_mapping, givs = {}, []
+if randogiv_path:
+    with open(randogiv_path, "r", encoding="utf-8") as f:
+        for row in csv.reader(f):
+            if len(row) >= 2 and row[0].strip() and row[1].strip():
+                key = row[0].strip()
+                val = row[1].strip()
+                givs.append(key)
+                bot_mapping[key] = val
+    info_found("randogiv.csv", randogiv_path)
+else:
+    warn_missing("randogiv.csv", "start_param -> bot mapping bo'sh bo'ladi.")
+
+print("📌 Yuklangan start_param lar va botlar:")
+for k, v in bot_mapping.items():
+    print(f"   ➤ {k} => {v}")
+
+# randolimit.csv (kutish vaqti, birinchi katak)
+limit_path = find_path([os.path.join(WIN, "randolimit.csv"),
+                        os.path.join(ANDR, "randolimit.csv"),
+                        os.path.join(CURR, "randolimit.csv")])
+try:
+    limituzz = int(read_first_cell_csv_file(limit_path)) if limit_path else 1
+    info_found("randolimit.csv", limit_path or "(topilmadi, default 1s)")
+except Exception:
+    limituzz = 1
+    warn_missing("randolimit.csv", "default 1 soniya qo‘llanadi.")
+print(f"Kutiladigan vaqt - {limituzz}")
+
+# ochiq/yopiq kanallar ro'yxati
+ranochiq_path = find_path([os.path.join(WIN, "ranochiqkanal.csv"),
+                           os.path.join(ANDR, "ranochiqkanal.csv"),
+                           os.path.join(CURR, "ranochiqkanal.csv")])
+ranyopiq_path = find_path([os.path.join(WIN, "ranyopiqkanal.csv"),
+                           os.path.join(ANDR, "ranyopiqkanal.csv"),
+                           os.path.join(CURR, "ranyopiqkanal.csv")])
+
+premium_channels = read_list_csv_first_col(ranochiq_path) if ranochiq_path else []
+yopiq_channels    = read_list_csv_first_col(ranyopiq_path) if ranyopiq_path else []
+
+if ranochiq_path: info_found("ranochiqkanal.csv", ranochiq_path)
+else:             warn_missing("ranochiqkanal.csv")
+if ranyopiq_path: info_found("ranyopiqkanal.csv", ranyopiq_path)
+else:             warn_missing("ranyopiqkanal.csv")
+
+channels = premium_channels + yopiq_channels
+
 
 
 

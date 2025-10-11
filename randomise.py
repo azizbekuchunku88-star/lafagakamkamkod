@@ -299,43 +299,6 @@ def add_to_bans(phone):
         print(colored(f"⚠️ Ban faylga yozishda xatolik: {e}", "red"))
 
 
-def read_csv(file_path):
-    with open(file_path, 'r', encoding='utf-8') as f:
-        reader = csv.reader(f)
-        next(reader)  # Sarlavha qatorini o'tkazib yuborish
-        return [(row[0].strip(), row[1].strip()) for row in reader if len(row) == 2]
-
-
-# GIV’lar va bot mapping
-givs = []
-bot_mapping = {}
-with open(r"C:\join\randogiv.csv", 'r', encoding='utf-8') as f:
-    reader = csv.reader(f)
-    for row in reader:
-        if len(row) >= 2:
-            key = row[0].strip()
-            val = row[1].strip()
-            givs.append(key)
-            bot_mapping[key] = val
-
-print("📌 Yuklangan start_param lar va botlar:")
-for k, v in bot_mapping.items():
-    print(f"   ➤ {k} => {v}")
-
-with open(r"C:\join\randolimit.csv", 'r', encoding='utf-8') as f:
-    reader = csv.reader(f)
-    limituzz = int((next(reader)[0] or "1").strip())
-print(f"Kutiladigan vaqt - {limituzz}")
-
-with open(r"C:\join\ranochiqkanal.csv", 'r', encoding='utf-8') as f:
-    premium_channels = [row[0].strip() for row in csv.reader(f) if row]
-
-with open(r"C:\join\ranyopiqkanal.csv", 'r', encoding='utf-8') as f:
-    yopiq_channels = [row[0].strip() for row in csv.reader(f) if row]
-
-channels = premium_channels + yopiq_channels
-
-
 # =============== Asosiy ish oqimi ===============
 async def run(phone, start_params, channels):
     api_id = 22962676

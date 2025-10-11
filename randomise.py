@@ -17,6 +17,8 @@ from PIL import Image
 import os
 from typing import Optional
 
+print("Oxirgi yangilanish vaqti 23:39")
+
 
 # =============== Turnstile token olish ===============
 async def get_turnstile_token_async(

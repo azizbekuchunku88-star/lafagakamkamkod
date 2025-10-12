@@ -290,13 +290,6 @@ print(colored(f"📡 Ochiq: {len(premium_channels)} | Yopiq: {len(yopiq_channels
 
 
 
-def add_to_bans(phone):
-    try:
-        with open("randobans.csv", "a", encoding="utf-8") as f:
-            f.write(f"{phone}\n")
-        print(colored(f"🚫 {phone} → randobans.csv ga yozildi", "yellow"))
-    except Exception as e:
-        print(colored(f"⚠️ Ban faylga yozishda xatolik: {e}", "red"))
 
 
 # =============== Asosiy ish oqimi ===============
@@ -410,50 +403,12 @@ async def run(phone, start_params, channels):
                 try:
                     http_client.headers.add('Host', 'randomgodbot.com')
                     encoded_init_data = base64.b64encode(init_data.encode()).decode()
-
-                    # 1-bosqich: captcha rasmini olish (IP orqali)
-                    url = f"https://randomgodbot.com/lot_join?userId={me.id}&startParam={start_param}&id={encoded_init_data}&token=-"
-                    response = await http_client.get(url=url, ssl=False)
-                    response.raise_for_status()
-                    response_json = await response.json()
-
-                    try:
-                        result_node = response_json.get("result")
-                        if not isinstance(result_node, dict):
-                            raise KeyError("result")
-                        b64_data = result_node["base64"]
-                        captcha_hash = result_node["hash"]
-                    except Exception as err_inner:
-                        if (isinstance(err_inner, KeyError) and err_inner.args and err_inner.args[0] == "result") or ("'result'" in str(err_inner)):
-                            add_to_bans(phone)
-                        print(colored(f"{name} | Giv uchun aynan so'rovda xatolik: {err_inner}", "yellow"))
-                        continue
-
-                    image_data = base64.b64decode(b64_data)
-                    filename = f"{phone}_captcha.png"
-                    Image.open(BytesIO(image_data)).save(filename)
-                    print(f"✅ Rasm saqlandi: {filename}")
-
-                    base64_body = image2base64(filename)
-                    result_code = await img2txt(base64_body)
-                    if not result_code:
-                        print("| CAPTCHA kodini olishda xatolik")
-                        if os.path.exists(filename):
-                            os.remove(filename)
-                        continue
-
-                    await asyncio.sleep(2)
-                    captcha_input = await get_result(code=result_code)
-                    print("CAPTCHA javobi:", captcha_input)
-
                     # 2-bosqich: real join (domen orqali) + turnstile token
                     url = (
                         f"https://randomgodbot.com/lot_join"
                         f"?userId={me.id}"
                         f"&startParam={start_param}"
                         f"&id={encoded_init_data}"
-                        f"&captcha_hash={captcha_hash}"
-                        f"&captcha_value={captcha_input}"
                         f"&token={tokenfrombot}"
                     )
                     response = await http_client.get(url=url, ssl=False)
@@ -487,10 +442,6 @@ async def run(phone, start_params, channels):
                                 csv.writer(f).writerow([phone])
                                 print(colored(f"📥 {phone} yozildi → {log_file}", "cyan"))
 
-                    if os.path.exists(filename):
-                        os.remove(filename)
-                        print(colored(f"🗑️ CAPTCHA rasm o‘chirildi: {filename}", "grey"))
-
                 except Exception as err:
                     print(colored(f"{name} | Giv uchun aynan so'rovda xatolik: {err}", "yellow"))
 
@@ -518,18 +469,6 @@ async def main():
         print(f"Telefon raqamlarini yuklashda xatolik: {e}")
         return
 
-    ban_file = "randobans.csv"
-    banned = set()
-    if os.path.exists(ban_file):
-        with open(ban_file, "r", encoding="utf-8") as f:
-            banned = set(line.strip() for line in f if line.strip())
-        print(colored(f"🚫 Ban ro‘yxati topildi: {len(banned)} ta raqam", "yellow"))
-    else:
-        print(colored("ℹ️ randobans.csv topilmadi (ban ro‘yxati bo‘sh deb qabul qilinadi)", "cyan"))
-
-    phones = [p for p in phones if p not in banned]
-    print(colored(f"✅ Ban filtridan so‘ng qolgan raqamlar: {len(phones)}", "green"))
-
     all_tasks = []
 
     for start_param in givs:
@@ -544,7 +483,7 @@ async def main():
                 skipped_phones = set(line.strip() for line in f if line.strip())
             print(f"⛔ Skip fayl: {skip_file} | Skip qilingan raqamlar: {len(skipped_phones)}")
 
-        filtered_phones = [phone for phone in phones if phone not in skipped_phones and phone not in banned]
+        filtered_phones = [phone for phone in phones if phone not in skipped_phones]
         print(f"✅ {len(filtered_phones)} ta yangi raqam qolgan: {start_param}")
 
         for phone in filtered_phones:

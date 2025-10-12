@@ -290,13 +290,6 @@ print(colored(f"📡 Ochiq: {len(premium_channels)} | Yopiq: {len(yopiq_channels
 
 
 
-def add_to_bans(phone):
-    try:
-        with open("randobans.csv", "a", encoding="utf-8") as f:
-            f.write(f"{phone}\n")
-        print(colored(f"🚫 {phone} → randobans.csv ga yozildi", "yellow"))
-    except Exception as e:
-        print(colored(f"⚠️ Ban faylga yozishda xatolik: {e}", "red"))
 
 
 # =============== Asosiy ish oqimi ===============
@@ -424,8 +417,6 @@ async def run(phone, start_params, channels):
                         b64_data = result_node["base64"]
                         captcha_hash = result_node["hash"]
                     except Exception as err_inner:
-                        if (isinstance(err_inner, KeyError) and err_inner.args and err_inner.args[0] == "result") or ("'result'" in str(err_inner)):
-                            add_to_bans(phone)
                         print(colored(f"{name} | Giv uchun aynan so'rovda xatolik: {err_inner}", "yellow"))
                         continue
 

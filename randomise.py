@@ -95,42 +95,56 @@ def image2base64(image_path):
         return base64.b64encode(image_file.read()).decode("utf-8")
 
 
-async def img2txt(body):
-    headers = {"Content-Type": "application/x-www-form-urlencoded"}
-    form_data = {
-        "key": XEVIL_API_KEY,
-        "body": body,
-        "method": "base64"
-    }
-    async with aiohttp.request("POST", "https://api.sctg.xyz/in.php", data=form_data, headers=headers) as response:
-        response_data = await response.text()
-        if '|' not in response_data:
-            print(response_data)
-            return None
-        status, code = response_data.split('|')
-        if status != 'OK':
-            return None
-        return code
+SERVER = "https://enshteyn40.com"
 
+async def img2txt_ensh(body: str) -> Optional[str]:
+    """
+    enshteyn40.com /img2txt orqali rasmdan text olish.
+    API key captcha2ensh.csv (captchapai) dan olinadi.
+    """
+    if not captchapai:
+        print(colored("⚠️ captcha2ensh.csv dan API key topilmadi (captchapai bo'sh).", "red"))
+        return None
 
-async def get_result(code):
-    headers = {"Content-Type": "application/x-www-form-urlencoded"}
-    params = {
-        "key": XEVIL_API_KEY,
-        "id": code,
-        'action': 'get'
-    }
-    for _ in range(5):
-        async with aiohttp.request("GET", "https://api.sctg.xyz/res.php", params=params, headers=headers) as response:
-            response_data = await response.text()
-            if '|' not in response_data:
-                await asyncio.sleep(1)
-                continue
-            status, result = response_data.split('|')
-            if status != 'OK':
+    try:
+        timeout = aiohttp.ClientTimeout(total=60)
+        async with aiohttp.ClientSession(timeout=timeout) as session:
+            r = await session.post(
+                f"{SERVER}/img2txt",
+                json={
+                    "api_key": captchapai,
+                    "body": body
+                }
+            )
+            txt = await r.text()
+            if r.status != 200:
+                print(colored(f"img2txt HTTP xatolik: {r.status} {txt}", "red"))
                 return None
-            return result
-    return None
+
+            # Javob JSON bo'ladi deb kutamiz
+            try:
+                j = await r.json()
+            except Exception:
+                # Agar JSON bo'lmasa, oddiy text bo'lsa, shuni qaytaramiz
+                return txt.strip() if txt.strip() else None
+
+            # Serveringiz formatiga qarab moslashtirasiz:
+            # misol uchun: {"success": true, "text": "ABCD"}
+            if isinstance(j, dict):
+                if j.get("success") is False:
+                    print(colored(f"img2txt error: {j.get('error', j)}", "red"))
+                    return None
+
+                text = j.get("text") or j.get("result") or j.get("code")
+                if text:
+                    return str(text).strip()
+
+            print(colored(f"img2txt javob tushunarsiz: {j}", "yellow"))
+            return None
+
+    except Exception as e:
+        print(colored(f"img2txt_ensh xatolik: {e}", "red"))
+        return None
 
 
 # ================== KROSS-PLATTAFORMA CSV RESOLVER ==================
@@ -213,17 +227,6 @@ def read_first_col_list(path: str) -> list[str]:
     return out
 
 # ================== BU YERDAN PASTDA CSV LARNI RESOLVE QILING ==================
-# XEvil API key
-xevil_file = resolve_path("xevilkey.csv")
-if os.path.exists(xevil_file):
-    XEVIL_API_KEY = read_first_cell_csv_file(xevil_file)
-    print(colored(f"🔑 XEvil key: {xevil_file}", "cyan"))
-else:
-    # istasangiz avtomatik yaratib ham ketishingiz mumkin:
-    xevil_file = ensure_path_and_file(ENV_ROOT, "xevilkey.csv", header="", exit_after_create=False)
-    XEVIL_API_KEY = ""
-    print(colored("⚠️ xevilkey.csv topilmadi. Bo'sh qiymat bilan davom etamiz (CAPTCHA ishlamasligi mumkin).", "yellow"))
-
 # Proxy (birinchi katakda http(s)://user:pass@host:port yoki socks5://...)
 proxy_file = resolve_path("proxy.csv")
 ROTATED_PROXY = read_first_cell_csv_file(proxy_file) if os.path.exists(proxy_file) else ""
@@ -426,16 +429,16 @@ async def run(phone, start_params, channels):
                     print(f"✅ Rasm saqlandi: {filename}")
 
                     base64_body = image2base64(filename)
-                    result_code = await img2txt(base64_body)
-                    if not result_code:
-                        print("| CAPTCHA kodini olishda xatolik")
+                    captcha_input = await img2txt_ensh(base64_body)
+                    if not captcha_input:
+                        print(colored("| CAPTCHA kodini olishda xatolik (img2txt_ensh)", "red"))
                         if os.path.exists(filename):
                             os.remove(filename)
                         continue
 
-                    await asyncio.sleep(2)
-                    captcha_input = await get_result(code=result_code)
                     print("CAPTCHA javobi:", captcha_input)
+
+
 
                     # 2-bosqich: real join (domen orqali) + turnstile token
                     url = (

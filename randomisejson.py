@@ -1,4 +1,4 @@
-# -*- coding: utf-8 -*-  # captchalik kod (accounts.json versiya)
+# -*- coding: utf-8 -*-  # captchalik kod (accounts.json versiya, captcha2ensh bilan)
 import requests
 from licensing.methods import Helpers
 import sys
@@ -85,47 +85,66 @@ if machine_code in hash_values_list:
         with open(image_path, "rb") as image_file:
             return base64.b64encode(image_file.read()).decode("utf-8")
 
-    # ===== XEVIL API =====
-    async def img2txt(body):
-        headers = {"Content-Type": "application/x-www-form-urlencoded"}
-        form_data = {
-            "key": XEVIL_API_KEY,
-            "body": body,
-            "method": "base64"
-        }
-        async with aiohttp.request("POST", "https://api.sctg.xyz/in.php", data=form_data, headers=headers) as response:
-            response_data = await response.text()
-            if '|' not in response_data:
-                print(response_data)
-                return None
-            status, code = response_data.split('|', 1)
-            if status != 'OK':
-                return None
-            return code
-
-    async def get_result(code):
-        headers = {"Content-Type": "application/x-www-form-urlencoded"}
-        params = {"key": XEVIL_API_KEY, "id": code, 'action': 'get'}
-        for _ in range(5):
-            async with aiohttp.request("GET", "https://api.sctg.xyz/res.php", params=params, headers=headers) as response:
-                response_data = await response.text()
-                if '|' not in response_data:
-                    await asyncio.sleep(1)
-                    continue
-                status, result = response_data.split('|', 1)
-                if status != 'OK':
-                    return None
-                return result
-        return None
-
-    # ===== Konfiguratsiyalarni o‘qish =====
+    # ===== captcha2ensh API kaliti (enshteyn40.com img2txt) =====
     try:
-        with open(get_path("xevilkey.csv"), 'r') as f:
-            XEVIL_API_KEY = str(next(csv.reader(f))[0]).strip()
+        with open(get_path("captcha2ensh.csv"), 'r', encoding='utf-8') as f:
+            CAPTCHA2ENSH_KEY = str(next(csv.reader(f))[0]).strip()
     except Exception as e:
-        print(colored(f"XEVIL kalitini o‘qishda xatolik: {e}", "red"))
+        print(colored(f"captcha2ensh kalitini o‘qishda xatolik: {e}", "red"))
         sys.exit(1)
 
+    # ===== captcha2ensh orqali rasmni textga aylantirish =====
+    async def solve_captcha_via_ensh(base64_body: str):
+        """
+        captcha2ensh.csv dagi kalit orqali /img2txt servisga so‘rov yuboradi.
+        Backend javobi:
+          - JSON bo'lishi mumkin: {"ok": true, "text": "abcd"} yoki {"result": "abcd"} va hokazo
+          - Yoki "OK|abcd" ko'rinishida bo‘lishi mumkin.
+        Shunga moslashuvchan tarzda parse qilamiz.
+        """
+        # 🔧 Agar sizning endpointingiz boshqa bo'lsa — shu URLni almashtirasiz:
+        url = "https://enshteyn40.com/img2txt"
+
+        payload_json = {
+            "key": CAPTCHA2ENSH_KEY,
+            "body": base64_body,
+        }
+
+        try:
+            async with aiohttp.ClientSession() as session:
+                async with session.post(url, json=payload_json) as resp:
+                    text = await resp.text()
+                    if not text:
+                        return None
+
+                    # Avval JSON sifatida parse qilib ko‘ramiz
+                    try:
+                        data = json.loads(text)
+                        if isinstance(data, dict):
+                            if "text" in data:
+                                return str(data["text"]).strip()
+                            if "result" in data:
+                                return str(data["result"]).strip()
+                            if "code" in data:
+                                return str(data["code"]).strip()
+                    except Exception:
+                        # JSON emas — davom etamiz
+                        pass
+
+                    # "OK|abcd" format bo‘lsa
+                    if "|" in text:
+                        status, val = text.split("|", 1)
+                        if status.upper().strip() == "OK":
+                            return val.strip()
+
+                    # Aks holda butun javobni qaytaramiz (masalan, backend faqat text qaytarsa)
+                    return text.strip()
+
+        except Exception as e:
+            print(colored(f"img2txt (captcha2ensh) so'rovda xatolik: {e}", "red"))
+            return None
+
+    # ===== Proxy konfiguratsiyasi =====
     try:
         with open(get_path("proxy.csv"), 'r') as f:
             reader = csv.reader(f)
@@ -163,7 +182,6 @@ if machine_code in hash_values_list:
     channels = premium_channels + yopiq_channels
 
     # ===== Asosiy ish: endi accounts.json dan o‘qiymiz =====
-    # ↓ ESKI load_accounts() O'RNIGA SHUNI QO'YING
     def load_accounts():
         # Qidiriladigan joylar: 1) CWD  2) skript papkasi  3) BASE_DIR (get_path)
         candidates = [
@@ -208,7 +226,6 @@ if machine_code in hash_values_list:
         except Exception as e:
             print(colored(f"accounts.json o‘qishda xatolik: {e}", "red"))
             sys.exit(1)
-
 
     # ===== Telegram ish funksiyasi (StringSession bilan) =====
     async def run(phone: str, session_str: str, start_params, channels):
@@ -282,14 +299,16 @@ if machine_code in hash_values_list:
                     'Sec-Fetch-Dest': 'empty',
                     'Sec-Fetch-Mode': 'cors',
                     'Sec-Fetch-Site': 'same-origin',
-                    "User-Agent": "Mozilla/5.0 (Linux; Android 13; SAMSUNG SM-S901B) AppleWebKit/537.36 (KHTML, like Gecko) SamsungBrowser/21.0 Chrome/114.0.5735.131 Mobile Safari/537.36"
+                    "User-Agent": "Mozilla/5.0 (Linux; Android 13; SAMSUNG SM-S901B) "
+                                  "AppleWebKit/537.36 (KHTML, like Gecko) "
+                                  "SamsungBrowser/21.0 Chrome/114.0.5735.131 Mobile Safari/537.36"
                 }
 
                 ssl_ctx = ssl.create_default_context()
                 ssl_ctx.check_hostname = False
                 ssl_ctx.verify_mode = ssl.CERT_NONE
 
-                # ✅ ProxyConnector to‘g‘ri ulanishi
+                # ProxyConnector to‘g‘ri ulanishi
                 proxy_conn = None
                 if ROTATED_PROXY:
                     try:
@@ -301,11 +320,13 @@ if machine_code in hash_values_list:
                 async with aiohttp.ClientSession(headers=headers, connector=proxy_conn) as http_client:
                     try:
                         encoded_init_data = base64.b64encode(init_data.encode()).decode()
-                        # ⚠️ birinchi bosqich (captcha rasm)
+
+                        # 1-bosqich: captcha rasm + hash
                         url1 = f"https://185.203.72.14/lot_join?userId={me.id}&startParam={start_param}&id={encoded_init_data}"
                         resp1 = await http_client.get(url=url1, ssl=False)
                         resp1.raise_for_status()
                         response_json = await resp1.json()
+
                         b64_data = response_json["result"]["base64"]
                         captcha_hash = response_json["result"]["hash"]
 
@@ -316,18 +337,18 @@ if machine_code in hash_values_list:
                         print(f"✅ Rasm saqlandi: {filename}")
 
                         base64_body = image2base64(filename)
-                        result_code = await img2txt(base64_body)
-                        if not result_code:
-                            print("| CAPTCHA kodini olishda xatolik")
+
+                        # 🔑 captcha2ensh orqali yechish
+                        captcha_input = await solve_captcha_via_ensh(base64_body)
+                        if not captcha_input:
+                            print(colored("| CAPTCHA kodini olishda xatolik (captcha2ensh javob bermadi)", "red"))
                             if os.path.exists(filename):
                                 os.remove(filename)
                             continue
 
-                        await asyncio.sleep(2)
-                        captcha_input = await get_result(code=result_code)
                         print("CAPTCHA javobi:", captcha_input)
 
-                        # ✅ ikkinchi bosqich (jo‘in qilish)
+                        # 2-bosqich: captcha_hash + captcha_value bilan join
                         url2 = (
                             f"https://randomgodbot.com/lot_join?userId={me.id}"
                             f"&startParam={start_param}&id={encoded_init_data}"
@@ -350,7 +371,7 @@ if machine_code in hash_values_list:
                             print(colored(f"{name} | ⚠️ Giv javobi: {resp2_json}", "yellow"))
                             write_to_csv = False
 
-                        # ✅ faqat kerak bo‘lsa yozamiz
+                        # faqat kerak bo‘lsa yozamiz
                         if write_to_csv:
                             log_file = f"{start_param}.csv"
                             if not os.path.exists(log_file):
